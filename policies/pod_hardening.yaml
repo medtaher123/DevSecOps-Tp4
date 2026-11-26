@@ -1,0 +1,28 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: notes-pod-hardening
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+    - name: no-latest-and-non-root
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [notes]
+      validate:
+        message: "non-root obligatoire, privileged interdit, tag latest interdit"
+        pattern:
+          spec:
+            securityContext:
+              runAsNonRoot: true
+            containers:
+              - securityContext:
+                  privileged: "false"
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  capabilities:
+                    drop: ["ALL"]
+                =(image): "!*:latest"

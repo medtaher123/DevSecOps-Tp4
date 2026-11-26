@@ -1,0 +1,12 @@
+Error from server: error when applying patch:
+{"metadata":{"annotations":{"kubectl.kubernetes.io/last-applied-configuration":"{\"apiVersion\":\"apps/v1\",\"kind\":\"Deployment\",\"metadata\":{\"annotations\":{},\"name\":\"notes-api\",\"namespace\":\"notes\"},\"spec\":{\"replicas\":1,\"selector\":{\"matchLabels\":{\"app\":\"notes-api\"}},\"template\":{\"metadata\":{\"labels\":{\"app\":\"notes-api\"}},\"spec\":{\"containers\":[{\"env\":[{\"name\":\"APP_HOST\",\"value\":\"0.0.0.0\"},{\"name\":\"API_KEY\",\"valueFrom\":{\"secretKeyRef\":{\"key\":\"API_KEY\",\"name\":\"notes-api-secret\"}}}],\"image\":\"host.minikube.internal:5001/notes-api:unsigned\",\"imagePullPolicy\":\"IfNotPresent\",\"name\":\"notes-api\",\"ports\":[{\"containerPort\":5000}],\"resources\":{\"limits\":{\"cpu\":\"200m\",\"memory\":\"128Mi\"},\"requests\":{\"cpu\":\"50m\",\"memory\":\"64Mi\"}},\"securityContext\":{\"allowPrivilegeEscalation\":false,\"capabilities\":{\"drop\":[\"ALL\"]},\"privileged\":false,\"readOnlyRootFilesystem\":true},\"volumeMounts\":[{\"mountPath\":\"/tmp\",\"name\":\"tmp\"}]}],\"securityContext\":{\"runAsGroup\":10001,\"runAsNonRoot\":true,\"runAsUser\":10001,\"seccompProfile\":{\"type\":\"RuntimeDefault\"}},\"volumes\":[{\"emptyDir\":{},\"name\":\"tmp\"}]}}}}\n"}},"spec":{"template":{"spec":{"$setElementOrder/containers":[{"name":"notes-api"}],"containers":[{"image":"host.minikube.internal:5001/notes-api:unsigned","name":"notes-api"}]}}}}
+to:
+Resource: "apps/v1, Resource=deployments", GroupVersionKind: "apps/v1, Kind=Deployment"
+Name: "notes-api", Namespace: "notes"
+for: "k8s/deployment.yaml": error when patching "k8s/deployment.yaml": admission webhook "mutate.kyverno.svc-fail" denied the request: 
+
+resource Deployment/notes/notes-api was blocked due to the following policies 
+
+verify-notes-images:
+  autogen-verify-cosign-signature: 'failed to verify image host.minikube.internal:5001/notes-api:unsigned:
+    .attestors[0].entries[0].keys: no signatures found'

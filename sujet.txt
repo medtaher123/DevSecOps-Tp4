@@ -1,0 +1,35 @@
+TRAVAUX PRATIQUES • DEVSECOPS AVANCÉ
+Sécurisation de la Supply Chain Logicielle et Gouvernance « Policy-as-Code »
+
+Prérequis : SAST, SCA, DAST, RASP, scan d'images.
+
+Contexte : un audit montre qu'une image non vérifiée peut être déployée à la main,
+et que les manifestes Kubernetes sont trop permissifs avec des secrets en clair.
+
+Objectif : chaîne Zero-Trust. Aucun artefact ne s'exécute sur le cluster s'il n'a pas
+été produit, analysé et signé par le pipeline.
+
+Étape 1 — Secrets : Gitleaks (pre-commit + CI sur l'historique), révocation,
+externalisation via SOPS/Age ou Vault.
+
+Étape 2 — IaC : Trivy config ou Checkov bloquant (HIGH/CRITICAL). Durcir :
+runAsNonRoot, privileged false, allowPrivilegeEscalation false,
+readOnlyRootFilesystem, drop ALL capabilities, limites CPU/mémoire,
+image par digest ou tag immuable, NetworkPolicy.
+
+Étape 3 — SBOM (Syft, CycloneDX ou SPDX) + signature Cosign de l'image.
+
+Étape 4 — Kind ou K3s + Kyverno Enforce :
+  - verifyImages (clé publique du pipeline)
+  - rejet root et tag :latest
+
+Étape 5 (bonus) — DefectDojo /api/v2/import-scan/
+
+Tests :
+  T1 secret dans un commit → rejet pre-commit ou échec CI
+  T2 privileged: true → échec du stage IaC avant le build
+  T3 image non signée → kubectl apply refusé par Kyverno
+  T4 pipeline sain → déploiement autorisé, SBOM, pod Running
+
+Livrables : dépôt (CI, manifestes, SOPS, ClusterPolicy), preuves T1–T4,
+synthèse des failles IaC corrigées et de la chaîne cryptographique.

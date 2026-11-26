@@ -1,0 +1,12 @@
+title = "TP4 gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "fixture T1 et clé déjà révoquée dans le manifeste de départ"
+paths = [
+  '''k8s/deployment.yaml''',
+  '''scripts/t1-leak.env''',
+  '''sujet.txt''',
+]

@@ -1,0 +1,32 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: verify-notes-images
+spec:
+  validationFailureAction: Enforce
+  background: false
+  webhookTimeoutSeconds: 30
+  rules:
+    - name: verify-cosign-signature
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [notes]
+      verifyImages:
+        - imageReferences:
+            - "host.minikube.internal:5001/notes-api:*"
+          attestors:
+            - entries:
+                - keys:
+                    publicKeys: |-
+                      -----BEGIN PUBLIC KEY-----
+                      MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZ1kPGhhf3XzLqfrJJWpKRd82fzSX
+                      YnNIpzLMlM5ogcjYQ2NipRqxh191pf0NFEVJtlgRUHdmCBGE1XgoPolgoQ==
+                      -----END PUBLIC KEY-----
+                    rekor:
+                      url: https://rekor.sigstore.dev
+                      ignoreTlog: true
+                    ctlog:
+                      ignoreSCT: true
+          required: true

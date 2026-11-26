@@ -1,0 +1,10 @@
+age.key
+cosign.key
+cosign.key.bak
+.env
+*.dec.yaml
+reports/
+sbom/
+.gitleaks-staging/
+cosign.pub.bak
+*.bak

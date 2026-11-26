@@ -1,0 +1,10 @@
+.git
+.github
+k8s
+policies
+secrets
+scripts
+screenshots
+*.md
+.env
+age.key

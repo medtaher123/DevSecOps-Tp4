@@ -1,0 +1,59 @@
+name: supply-chain
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks (working tree + historique)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "true"
+  iac:
+    needs: secret-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy config (HIGH, CRITICAL)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: k8s
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          skip-dirs: k8s/insecure
+          format: table
+  
+  build-sbom-sign:
+    needs: iac
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: docker build -t notes-api:1.0.0 .
+      - name: SBOM CycloneDX
+        uses: anchore/sbom-action@v0
+        with:
+          image: notes-api:1.0.0
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.cdx.json
+      - uses: sigstore/cosign-installer@v3
+      - name: Sign
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+        run: |
+          printf '%s' "$COSIGN_PRIVATE_KEY" > cosign.key
+          cosign sign --key cosign.key --yes notes-api:1.0.0
+          rm -f cosign.key
