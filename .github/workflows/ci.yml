@@ -35,6 +35,7 @@ jobs:
           name: gitleaks-sarif
           path: gitleaks.sarif
           if-no-files-found: ignore
+
   iac:
     needs: secret-scan
     runs-on: ubuntu-latest
@@ -48,10 +49,16 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1"
           format: table
-  
+
   build-sbom-sign:
     needs: iac
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+      COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
     steps:
       - uses: actions/checkout@v4
       - name: Build
@@ -67,11 +74,25 @@ jobs:
           name: sbom
           path: sbom.cdx.json
       - uses: sigstore/cosign-installer@v3
-      - name: Sign
-        env:
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      - name: Login to GHCR
+        if: ${{ env.COSIGN_PRIVATE_KEY != '' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push and sign image
+        if: ${{ env.COSIGN_PRIVATE_KEY != '' }}
         run: |
-          printf '%s' "$COSIGN_PRIVATE_KEY" > cosign.key
-          cosign sign --key cosign.key --yes notes-api:1.0.0
+          set -euo pipefail
+          IMAGE="ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]'):1.0.0"
+          docker tag notes-api:1.0.0 "$IMAGE"
+          docker push "$IMAGE"
+          printf '%s\n' "$COSIGN_PRIVATE_KEY" > cosign.key
+          cosign sign --key cosign.key --yes --tlog-upload=false "$IMAGE"
           rm -f cosign.key
+      - name: Skip sign (secrets missing)
+        if: ${{ env.COSIGN_PRIVATE_KEY == '' }}
+        run: |
+          echo "::warning::COSIGN_PRIVATE_KEY is not set. Add repo secrets COSIGN_PRIVATE_KEY and COSIGN_PASSWORD, then re-run."
+          echo "SBOM artifact was still uploaded."
